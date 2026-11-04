@@ -114,7 +114,7 @@ footer{margin-top:36px;border-top:1px solid var(--line);padding-top:16px;color:v
 <div class="wrap">
   <div class="picker" id="picker">
     <h2>Who are you?</h2>
-    <p>Pick your name and the Today and Flights views lead with your own schedule. This stays on this screen only.</p>
+    <p>Pick your name and the Today view leads with your own schedule, the Itinerary shows only the events you are part of, and Flights &amp; Hotels leads with your own flights. Pick Everyone to see the full trip again. This stays on this screen only.</p>
     <div class="chips" id="chips" role="group" aria-label="Choose your name"></div>
   </div>
 
@@ -143,7 +143,8 @@ footer{margin-top:36px;border-top:1px solid var(--line);padding-top:16px;color:v
   <!-- ITINERARY -->
   <section class="panel" id="panel-itinerary" role="tabpanel">
     <h2 class="sec">Day by day</h2>
-    <p class="lede">Every event from the Hub, in order. Times are local to the airport: FL = Florida time, CO = Colombia time. TBD means no time is on a filed confirmation yet.</p>
+    <p class="lede" id="itineraryLede">Every event from the Hub, in order. Times are local to the airport: FL = Florida time, CO = Colombia time. TBD means no time is on a filed confirmation yet.</p>
+    <div id="itineraryFilterNote"></div>
     <div id="itineraryList"></div>
   </section>
 
@@ -234,12 +235,24 @@ tabs.forEach(function(t){t.addEventListener("click",function(){
 
 /* traveler picker */
 var chips=document.getElementById("chips");
+function syncChips(){
+  chips.querySelectorAll(".chip").forEach(function(c){
+    var name=c.getAttribute("data-name");
+    c.setAttribute("aria-pressed", (selected===null ? name==="" : name===selected)?"true":"false");
+  });
+}
+function setSelected(name){
+  selected=name;
+  syncChips();
+  renderToday(); renderMyFlights(); renderItinerary();
+}
+var allChip=document.createElement("button"); allChip.className="chip"; allChip.textContent="Everyone"; allChip.setAttribute("data-name",""); allChip.setAttribute("aria-pressed","true");
+allChip.addEventListener("click",function(){ setSelected(null); });
+chips.appendChild(allChip);
 TRAVELERS.forEach(function(tr){
-  var b=document.createElement("button"); b.className="chip"; b.textContent=tr.name; b.setAttribute("aria-pressed","false");
+  var b=document.createElement("button"); b.className="chip"; b.textContent=tr.name; b.setAttribute("data-name",tr.name); b.setAttribute("aria-pressed","false");
   b.addEventListener("click",function(){
-    selected = (selected===tr.name)? null : tr.name;
-    chips.querySelectorAll(".chip").forEach(function(c){c.setAttribute("aria-pressed", c.textContent===selected?"true":"false")});
-    renderToday(); renderMyFlights();
+    setSelected(selected===tr.name ? null : tr.name);
   });
   chips.appendChild(b);
 });
@@ -283,16 +296,27 @@ function renderToday(){
 renderToday();
 
 /* itinerary */
-(function(){
-  var box=document.getElementById("itineraryList"); var cur="";
-  ITIN.forEach(function(e){
+function renderItinerary(){
+  var box=document.getElementById("itineraryList"); box.innerHTML="";
+  var note=document.getElementById("itineraryFilterNote");
+  var events = selected ? ITIN.filter(function(e){return e[2].split(", ").indexOf(selected)>-1}) : ITIN;
+  if(selected){
+    note.innerHTML='<div class="note" style="margin-bottom:16px"><strong>Showing only '+esc(selected)+'’s itinerary</strong> — '+events.length+' of '+ITIN.length+' events include '+esc(selected)+'. Pick <strong>Everyone</strong> above to see the full itinerary again.</div>';
+  } else {
+    note.innerHTML="";
+  }
+  if(!events.length){
+    box.innerHTML='<div class="card"><p class="sans" style="font-size:15px;margin:0">No events on the itinerary include '+esc(selected)+' yet.</p></div>';
+    return;
+  }
+  var cur="", tl=null;
+  events.forEach(function(e){
     if(e[0]!==cur){ cur=e[0];
       var h=document.createElement("div"); h.className="day-head";
       h.innerHTML='<span class="dnum">'+esc(e[0].replace(", 2026",""))+'</span><span class="dow">'+esc(e[1])+'</span>';
       box.appendChild(h);
-      var tl=document.createElement("div"); tl.className="tl"; tl.id="tl-"+cur; box.appendChild(tl);
+      tl=document.createElement("div"); tl.className="tl"; box.appendChild(tl);
     }
-    var tl=document.getElementById("tl-"+cur);
     var d=document.createElement("div"); d.className="ev";
     var kind = e[5]==="Travel"?"info":(e[5]==="Preaching"?"ok":"info");
     d.innerHTML='<div class="who">'+esc(e[2])+' · '+esc(e[4])+' '+badge(e[5],kind)+'</div><div class="what">'+esc(e[3])+'</div>'
@@ -300,7 +324,8 @@ renderToday();
       +(e[8]?'<div class="det">'+esc(e[8])+'</div>':"");
     tl.appendChild(d);
   });
-})();
+}
+renderItinerary();
 
 /* flights */
 function renderMyFlights(){
