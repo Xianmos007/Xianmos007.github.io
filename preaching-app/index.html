@@ -73,6 +73,10 @@
   .reader-body li{margin-bottom:.35em}
   .reader-body hr{border:none;border-top:1px solid #e5e5ea;margin:1.6em 0}
   .reader-body a{color:#0071e3}
+  .reader-body mark{background:#fff59d;color:inherit;padding:0 .1em;border-radius:3px}
+  .reader-body u{text-decoration:underline}
+  .reader-body table{border-collapse:collapse;margin:0 0 1em}
+  .reader-body td,.reader-body th{border:1px solid #d1d1d6;padding:6px 10px}
 
   /* ---------- Timer pill ---------- */
   #timerPill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:30;display:none;align-items:center;gap:12px;background:rgba(28,28,30,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#fff;border-radius:999px;padding:10px 12px 10px 20px;box-shadow:0 10px 34px rgba(0,0,0,.28);max-width:94vw;flex-wrap:wrap;justify-content:center}
@@ -96,6 +100,11 @@
   .modal input[type=text]{width:100%;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:11px 13px;font-size:16px;margin-bottom:10px}
   .modal textarea{width:100%;min-height:170px;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:11px 13px;font-size:14.5px}
   .modal .btnrow{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+  .pastezone{min-height:74px;background:rgba(255,255,255,.08);border:1px dashed var(--line);border-radius:12px;color:var(--ink);padding:11px 13px;font-size:14.5px;margin-bottom:10px;overflow:auto;max-height:180px}
+  .pastezone:empty:before{content:attr(data-ph);color:var(--ink-dim)}
+  .pastezone h1,.pastezone h2,.pastezone h3{margin:.3em 0}
+  .pastezone p{margin:0 0 .5em;color:var(--ink)}
+  .richnote{color:#6ee7b7;font-size:13.5px;min-height:18px;margin:2px 0 8px}
   @media (max-width:560px){ h1.lib-title{font-size:36px} .reader-body{padding-left:20px;padding-right:20px} }
 </style>
 </head>
@@ -211,6 +220,69 @@ function mdToHtml(md){
   flushPara();closeList(); return html;
 }
 
+/* ============ rich HTML import: Google Docs -> sanitized, format-preserving HTML ============ */
+function parseStyleDecls(str){ const out={}; String(str||"").split(";").forEach(part=>{ const i=part.indexOf(":"); if(i<0)return;
+  const k=part.slice(0,i).trim().toLowerCase(), v=part.slice(i+1).trim().toLowerCase().replace(/!important\s*$/,"").trim(); if(k)out[k]=v; }); return out; }
+function classStyleMap(doc){ const map={}; doc.querySelectorAll("style").forEach(st=>{ const txt=st.textContent||"";
+  const re=/\.([a-zA-Z0-9_-]+)\s*\{([^}]*)\}/g; let m; while((m=re.exec(txt))){ map[m[1]]=Object.assign(map[m[1]]||{},parseStyleDecls(m[2])); } }); return map; }
+function effStyle(el,classMap){ let s={}; const cls=(el.getAttribute&&el.getAttribute("class"))||"";
+  cls.split(/\s+/).forEach(c=>{ if(c&&classMap[c])Object.assign(s,classMap[c]); });
+  Object.assign(s,parseStyleDecls(el.getAttribute&&el.getAttribute("style"))); return s; }
+function isDefaultColor(v){ return !v||v==="rgb(0, 0, 0)"||v==="#000000"||v==="#000"||v==="black"; }
+function isClearBg(v){ return !v||v==="transparent"||v==="rgba(0, 0, 0, 0)"||v==="rgb(255, 255, 255)"||v==="#ffffff"||v==="#fff"||v==="white"; }
+function sanitizeHtml(rawHtml){
+  const doc=new DOMParser().parseFromString(String(rawHtml||""),"text/html");
+  const classMap=classStyleMap(doc);
+  const DROP=new Set(["SCRIPT","STYLE","HEAD","IFRAME","OBJECT","EMBED","LINK","META","TITLE","NOSCRIPT","SVG","MATH","FORM","INPUT","BUTTON","TEXTAREA","SELECT","IMG","VIDEO","AUDIO","SOURCE"]);
+  function node(n){
+    if(n.nodeType===3)return esc(n.nodeValue);
+    if(n.nodeType!==1)return "";
+    const tag=n.tagName;
+    if(DROP.has(tag))return "";
+    const st=effStyle(n,classMap);
+    let inner=""; n.childNodes.forEach(c=>{ inner+=node(c); });
+    const deco=String(st["text-decoration"]||"")+" "+String(st["text-decoration-line"]||"");
+    const wrap=[];
+    const fw=st["font-weight"];
+    const notBold=fw==="normal"||fw==="400"||fw==="300"||fw==="200"||fw==="100";
+    if(((tag==="STRONG"||tag==="B")&&!notBold)||fw==="bold"||fw==="bolder"||(fw&&parseInt(fw,10)>=600))wrap.push(["<strong>","</strong>"]);
+    if(tag==="EM"||tag==="I"||st["font-style"]==="italic"||st["font-style"]==="oblique")wrap.push(["<em>","</em>"]);
+    if(tag==="U"||deco.indexOf("underline")>=0)wrap.push(["<u>","</u>"]);
+    if(tag==="S"||tag==="STRIKE"||tag==="DEL"||deco.indexOf("line-through")>=0)wrap.push(["<s>","</s>"]);
+    if(tag==="SUB")wrap.push(["<sub>","</sub>"]);
+    if(tag==="SUP")wrap.push(["<sup>","</sup>"]);
+    let spanStyle="";
+    if(!isClearBg(st["background-color"]))spanStyle+="background-color:"+st["background-color"]+";";
+    if(!isDefaultColor(st["color"]))spanStyle+="color:"+st["color"]+";";
+    if(spanStyle)wrap.push(['<span style="'+spanStyle+'">',"</span>"]);
+    for(let i=wrap.length-1;i>=0;i--)inner=wrap[i][0]+inner+wrap[i][1];
+    const align=(st["text-align"]&&["center","right","justify"].indexOf(st["text-align"])>=0)?' style="text-align:'+st["text-align"]+'"':"";
+    switch(tag){
+      case "P": return inner.trim()? "<p"+align+">"+inner+"</p>":"";
+      case "DIV": case "SECTION": case "ARTICLE": case "MAIN": case "HEADER": case "FOOTER":
+        return /<(p|h[1-6]|ul|ol|blockquote|hr)/.test(inner)? inner : (inner.trim()?"<p"+align+">"+inner+"</p>":"");
+      case "H1": case "H2": case "H3": case "H4": case "H5": case "H6": { const n2=Math.min(4,parseInt(tag[1],10)); return "<h"+n2+align+">"+inner+"</h"+n2+">"; }
+      case "BLOCKQUOTE": return "<blockquote>"+inner+"</blockquote>";
+      case "UL": return "<ul>"+inner+"</ul>";
+      case "OL": return "<ol>"+inner+"</ol>";
+      case "LI": return "<li>"+inner+"</li>";
+      case "BR": return "<br>";
+      case "HR": return "<hr>";
+      case "A": { const href=n.getAttribute("href")||""; return /^https?:\/\//i.test(href)? '<a href="'+esc(href)+'" target="_blank" rel="noopener">'+inner+"</a>" : inner; }
+      default: return inner;
+    }
+  }
+  let out=""; if(doc.body)doc.body.childNodes.forEach(n=>{out+=node(n)});
+  return out.trim();
+}
+function htmlDocTitle(rawHtml){
+  const doc=new DOMParser().parseFromString(String(rawHtml||""),"text/html");
+  if(doc.title&&doc.title.trim())return doc.title.trim().replace(/\.html?$/i,"");
+  const h=doc.querySelector("h1,h2"); if(h&&h.textContent.trim())return h.textContent.trim();
+  return "";
+}
+function htmlText(h){ const d=document.createElement("div"); d.innerHTML=h||""; return d.textContent||""; }
+
 /* ============ state ============ */
 let IMPORTS=[];
 let groupMode="date";
@@ -224,7 +296,7 @@ function fillSelect(sel,vals,label){ const cur=sel.value;
 
 function filtered(){
   const q=els.search.value.trim().toLowerCase();
-  let all=IMPORTS.map(i=>({id:i.id,title:i.title,book:i.book||"",scripture:i.scripture||"",series:i.series||"",date:i.date||"",year:i.year||(i.date||"").slice(0,4),available:true,imported:true,words:(i.markdown||"").split(/\s+/).length}));
+  let all=IMPORTS.map(i=>({id:i.id,title:i.title,book:i.book||"",scripture:i.scripture||"",series:i.series||"",date:i.date||"",year:i.year||(i.date||"").slice(0,4),available:true,imported:true,words:(i.html?htmlText(i.html):(i.markdown||"")).split(/\s+/).length}));
   return all.filter(s=>{
     if(q && !(s.title+" "+(s.scripture||"")+" "+(s.book||"")+" "+(s.series||"")).toLowerCase().includes(q))return false;
     if(els.book.value && s.book!==els.book.value)return false;
@@ -242,7 +314,7 @@ function groupKey(s){
 function render(){
   const items=filtered();
   els.count.textContent=IMPORTS.length? items.length+" shown · "+IMPORTS.length+" imported on this device" : "";
-  if(!items.length){els.list.innerHTML= IMPORTS.length? '<div class="empty">No sermons match those filters.</div>' : '<div class="empty">No sermons yet.<br><br>Tap <strong>Import</strong> to add your first sermon: paste the text or choose a .md / .txt file.<br>Imported sermons are stored <strong>only on this device</strong> and are never uploaded.<br><br><button class="btn primary" id="emptyImportBtn">Import a sermon</button></div>';
+  if(!items.length){els.list.innerHTML= IMPORTS.length? '<div class="empty">No sermons match those filters.</div>' : '<div class="empty">No sermons yet.<br><br>Tap <strong>Import</strong> to add your first sermon: paste from Google Docs or choose a file (.html keeps all formatting).<br>Imported sermons are stored <strong>only on this device</strong> and are never uploaded.<br><br><button class="btn primary" id="emptyImportBtn">Import a sermon</button></div>';
     const eb=document.getElementById("emptyImportBtn"); if(eb)eb.addEventListener("click",showImport); return}
   const groups=new Map();
   for(const s of items){const k=groupKey(s); if(!groups.has(k))groups.set(k,[]); groups.get(k).push(s)}
@@ -266,14 +338,16 @@ function render(){
 let current=null;
 async function openSermon(id){
   const imp=IMPORTS.find(i=>i.id===id);
-  if(imp){showReader(imp.title,imp.markdown);return}
+  if(!imp)return;
+  if(imp.html||imp.format==="html")showReader(imp.title,imp.html||"",true);
+  else showReader(imp.title,imp.markdown||"",false);
 }
-function showReader(title,markdown){
+function showReader(title,content,isHtml){
   current=title;
   els.lib.style.display="none"; els.reader.style.display="block";
   $("readerTitle").textContent=title;
   const body=$("readerBody"); body.style.fontSize=settings.fontSize+"px";
-  body.innerHTML=mdToHtml(markdown); window.scrollTo(0,0);
+  body.innerHTML=isHtml? String(content||"") : mdToHtml(content); window.scrollTo(0,0);
   $("timerPill").classList.add("show"); timerReset();
 }
 function closeReader(){
@@ -312,25 +386,43 @@ function parseImport(raw){
 
 /* ============ modal + import ============ */
 function showModal(title,html){ $("modalBox").innerHTML="<h2>"+esc(title)+"</h2>"+html+'<div class="btnrow"><button class="btn" onclick="document.getElementById(\'modalWrap\').classList.remove(\'show\')">Close</button></div>'; $("modalWrap").classList.add("show"); }
-function showImport(){ let fileName=""; $("modalBox").innerHTML=
-  "<h2>Import a sermon</h2><p>Paste text or Markdown, or choose a .md / .txt file. Imported sermons are stored <strong>only on this device</strong> and are never uploaded.</p>"+
+function showImport(){ let fileName="", pendingHtml="", pendingRawHtml="";
+  $("modalBox").innerHTML=
+  "<h2>Import a sermon</h2><p>Formatting is kept with a Google Docs file or a rich paste:</p>"+
+  "<p><strong>Google Docs file:</strong> in the Doc, File &rarr; Download &rarr; Web Page (.html), then choose that file here.<br><strong>Copy &amp; paste:</strong> copy in the Doc, then tap the paste box and paste &mdash; bold, highlights, colors, underlines come with it.<br><strong>Markdown / text:</strong> a .md / .txt file or the text box still works as before.</p>"+
   '<input type="text" id="impTitle" placeholder="Title">'+
-  '<textarea id="impText" placeholder="Paste the sermon text here…"></textarea>'+
-  '<div class="btnrow"><label class="btn" style="display:inline-block">Choose file<input type="file" id="impFile" accept=".md,.txt,text/plain,text/markdown" style="display:none"></label>'+
+  '<div id="impPaste" class="pastezone" contenteditable="true" data-ph="Tap here and paste from Google Docs &mdash; formatting is kept&hellip;"></div>'+
+  '<div class="richnote" id="impRichNote"></div>'+
+  '<textarea id="impText" placeholder="&hellip;or paste plain text / Markdown here"></textarea>'+
+  '<div class="btnrow"><label class="btn" style="display:inline-block">Choose file<input type="file" id="impFile" accept=".md,.txt,.html,.htm,text/plain,text/markdown,text/html" style="display:none"></label>'+
   '<button class="btn primary" id="impSave">Save on this device</button>'+
   '<button class="btn" onclick="document.getElementById(\'modalWrap\').classList.remove(\'show\')">Cancel</button></div>';
   $("modalWrap").classList.add("show");
+  const finishSave=()=>{ $("libSub").textContent=IMPORTS.length+" sermon"+(IMPORTS.length===1?"":"s")+" on this device";
+    populateFilters(); $("modalWrap").classList.remove("show"); render(); };
+  const setHtml=(html,srcLabel)=>{ pendingRawHtml=html; pendingHtml=sanitizeHtml(html);
+    $("impRichNote").textContent=pendingHtml? "\u2713 Rich formatting captured ("+srcLabel+"). Tap Save to keep it on this device." : "No rich formatting found there \u2014 the plain-text route will be used instead.";
+    if(pendingHtml)$("impPaste").innerHTML=pendingHtml; };
+  $("impPaste").addEventListener("paste",e=>{ const cd=e.clipboardData||window.clipboardData;
+    const html=cd&&cd.getData? cd.getData("text/html") : "";
+    if(html){ e.preventDefault(); setHtml(html,"paste"); } });
   $("impFile").addEventListener("change",async e=>{ const f=e.target.files[0]; if(!f)return; fileName=f.name;
-    $("impText").value=await f.text(); });
-  $("impSave").addEventListener("click",async()=>{ const raw=$("impText").value;
-    if(!raw.trim()){alert("Paste or choose the sermon text first.");return}
+    const txt=await f.text();
+    if(/\.html?$/i.test(f.name)||f.type==="text/html"||/<html[\s>]/i.test(txt.slice(0,600))){ setHtml(txt,"file");
+      const t=htmlDocTitle(txt); if(t&&!$("impTitle").value.trim())$("impTitle").value=t; }
+    else { pendingHtml=""; pendingRawHtml=""; $("impText").value=txt; $("impRichNote").textContent=""; } });
+  $("impSave").addEventListener("click",async()=>{
+    if(pendingHtml){
+      const title=$("impTitle").value.trim()||htmlDocTitle(pendingRawHtml)||fileName.replace(/\.html?$/i,"")||"Imported sermon";
+      const item={id:"import-"+Date.now(),title:title,format:"html",html:pendingHtml,markdown:"",book:"",scripture:"",series:"",date:"",year:""};
+      IMPORTS.push(item); await DB.put("imports",item.id,item).catch(()=>{}); finishSave(); return; }
+    const zoneText=$("impPaste").textContent||"";
+    const raw=$("impText").value.trim()? $("impText").value : zoneText;
+    if(!raw.trim()){alert("Paste or choose the sermon first.");return}
     const p=parseImport(raw);
     const title=$("impTitle").value.trim()||p.title||fileName.replace(/\.(md|txt)$/i,"")||"Imported sermon";
-    const item={id:"import-"+Date.now(),title:title,markdown:p.body||raw.trim(),book:p.book||"",scripture:p.scripture||"",series:p.series||"",date:p.date||"",year:(p.date||"").slice(0,4)};
-    IMPORTS.push(item); await DB.put("imports",item.id,item).catch(()=>{});
-    $("libSub").textContent=IMPORTS.length+" sermon"+(IMPORTS.length===1?"":"s")+" on this device";
-    populateFilters();
-    $("modalWrap").classList.remove("show"); render(); });
+    const item={id:"import-"+Date.now(),title:title,format:"markdown",markdown:p.body||raw.trim(),book:p.book||"",scripture:p.scripture||"",series:p.series||"",date:p.date||"",year:(p.date||"").slice(0,4)};
+    IMPORTS.push(item); await DB.put("imports",item.id,item).catch(()=>{}); finishSave(); });
 }
 
 /* ============ wire up ============ */
