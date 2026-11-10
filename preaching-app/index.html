@@ -91,7 +91,9 @@
   .tbtn.main{background:#fff;color:#1c1c1e}
   #timerEdit{display:none;align-items:center;gap:8px}
   #timerEdit.show{display:flex}
-  #timerEdit input{width:64px;border:none;border-radius:10px;padding:8px;font-size:16px;text-align:center}
+  #timerEdit .tlabel{font-size:13.5px;color:rgba(255,255,255,.85);white-space:nowrap}
+  #timerEdit input{width:76px;border:none;border-radius:10px;padding:8px;font-size:16px;text-align:center}
+  #timerEdit input.invalid{outline:3px solid #f87171;background:#fee2e2}
   .preset{border:1px solid rgba(255,255,255,.35);background:none;color:#fff;border-radius:999px;padding:7px 11px;font-size:13.5px}
 
   /* ---------- Modal ---------- */
@@ -147,7 +149,7 @@
 
     <div class="count-line" id="countLine"></div>
     <div id="listHost"></div>
-    <div class="lib-foot">Preaching App · v6 · Updated Nov 10, 2026 · <button type="button" class="lib-update" id="updateCheck">Check for updates</button></div>
+    <div class="lib-foot">Preaching App · v7 · Updated Nov 10, 2026 · <button type="button" class="lib-update" id="updateCheck">Check for updates</button></div>
   </div>
 </section>
 
@@ -174,11 +176,12 @@
   <button class="tbtn" id="timerReset">Reset</button>
   <button class="tbtn" id="timerSetBtn">Set</button>
   <div id="timerEdit">
-    <input id="timerMinutes" type="number" min="1" max="240" inputmode="numeric">
+    <label class="tlabel" for="timerMinutes">Minutes:</label>
+    <input id="timerMinutes" type="number" min="1" max="600" step="1" inputmode="numeric" placeholder="min">
+    <button class="tbtn main" id="timerApply">Apply</button>
     <button class="preset" data-m="30">30</button><button class="preset" data-m="35">35</button>
     <button class="preset" data-m="40">40</button><button class="preset" data-m="45">45</button>
     <button class="preset" data-m="60">60</button>
-    <button class="tbtn main" id="timerApply">Done</button>
   </div>
 </div>
 
@@ -479,17 +482,20 @@ $("fontUp").addEventListener("click",()=>{settings.fontSize=Math.min(40,settings
 $("fontDown").addEventListener("click",()=>{settings.fontSize=Math.max(14,settings.fontSize-2);saveSettings();$("readerBody").style.fontSize=settings.fontSize+"px";progressRequest()});
 $("fsBtnLib").addEventListener("click",goFullscreen);
 $("updateCheck").addEventListener("click",()=>{ const u=new URL(location.href);
-  if(u.searchParams.get("v")!=="6"){ u.searchParams.set("v","6"); location.replace(u.toString()); }
+  if(u.searchParams.get("v")!=="7"){ u.searchParams.set("v","7"); location.replace(u.toString()); }
   else location.reload(); });
 $("fsBtnReader").addEventListener("click",goFullscreen);
 $("importBtn").addEventListener("click",showImport);
 $("modalWrap").addEventListener("click",e=>{if(e.target.id==="modalWrap")e.currentTarget.classList.remove("show")});
 $("timerToggle").addEventListener("click",()=>tRun?timerPause():timerStart());
 $("timerReset").addEventListener("click",timerReset);
-$("timerSetBtn").addEventListener("click",()=>{ $("timerMinutes").value=settings.targetMinutes; $("timerEdit").classList.toggle("show"); });
-$("timerApply").addEventListener("click",()=>{ const v=parseInt($("timerMinutes").value,10);
-  if(v>=1&&v<=240){settings.targetMinutes=v;saveSettings();timerReset()} $("timerEdit").classList.remove("show"); });
-document.querySelectorAll(".preset").forEach(b=>b.addEventListener("click",()=>{ settings.targetMinutes=parseInt(b.dataset.m,10); saveSettings(); $("timerMinutes").value=settings.targetMinutes; timerReset(); }));
+$("timerSetBtn").addEventListener("click",()=>{ const inp=$("timerMinutes"); inp.value=settings.targetMinutes; inp.classList.remove("invalid"); $("timerEdit").classList.toggle("show"); if($("timerEdit").classList.contains("show")){ inp.focus(); inp.select(); } });
+$("timerApply").addEventListener("click",()=>{ const inp=$("timerMinutes"); const v=Number(inp.value);
+  if(Number.isInteger(v)&&v>=1&&v<=600){ inp.classList.remove("invalid"); settings.targetMinutes=v; saveSettings(); timerReset(); $("timerEdit").classList.remove("show"); }
+  else { inp.classList.add("invalid"); inp.focus(); inp.select(); } });
+$("timerMinutes").addEventListener("input",e=>e.target.classList.remove("invalid"));
+$("timerMinutes").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("timerApply").click(); } });
+document.querySelectorAll(".preset").forEach(b=>b.addEventListener("click",()=>{ settings.targetMinutes=parseInt(b.dataset.m,10); saveSettings(); $("timerMinutes").value=settings.targetMinutes; $("timerMinutes").classList.remove("invalid"); timerReset(); }));
 
 function populateFilters(){
   const uniq=fn=>[...new Set(IMPORTS.map(fn).filter(Boolean))].sort();
