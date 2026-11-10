@@ -58,7 +58,8 @@
 
   /* ---------- Reader (white, Apple Books) ---------- */
   #readerView{display:none;min-height:100vh;background:#fff;color:#1c1c1e}
-  .reader-top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(0,0,0,.07);padding-top:env(safe-area-inset-top,0px)}
+  .reader-top{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid rgba(0,0,0,.07);padding-top:env(safe-area-inset-top,0px);transition:transform .28s ease,opacity .28s ease}
+  .reader-top.bar-hidden{transform:translateY(-100%);opacity:0;pointer-events:none}
   .reader-top-in{max-width:980px;margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:8px}
   .rbtn{border:none;background:rgba(0,0,0,.05);color:#0071e3;border-radius:999px;padding:8px 14px;font-size:15px;font-weight:600}
   .rbtn.dark{color:#1c1c1e}
@@ -105,6 +106,12 @@
   .pastezone h1,.pastezone h2,.pastezone h3{margin:.3em 0}
   .pastezone p{margin:0 0 .5em;color:var(--ink)}
   .richnote{color:#6ee7b7;font-size:13.5px;min-height:18px;margin:2px 0 8px}
+  /* ---------- Reading progress (reader only) ---------- */
+  #progressTrack{position:fixed;top:0;right:0;width:5px;height:100%;height:100dvh;background:rgba(10,30,60,.08);z-index:15;display:none}
+  #progressTrack.show{display:block}
+  #progressFill{width:100%;height:0%;background:var(--accent);border-radius:0 0 3px 3px}
+  #progressPct{position:fixed;right:11px;bottom:calc(env(safe-area-inset-bottom,0px) + 94px);z-index:15;display:none;font-size:12px;font-weight:600;color:#8e8e93;background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:2px 7px;border-radius:999px;font-variant-numeric:tabular-nums}
+  #progressPct.show{display:block}
   @media (max-width:560px){ h1.lib-title{font-size:36px} .reader-body{padding-left:20px;padding-right:20px} }
 </style>
 </head>
@@ -152,6 +159,10 @@
   </div></div>
   <article class="reader-body" id="readerBody"></article>
 </section>
+
+<!-- ================= READING PROGRESS ================= -->
+<div id="progressTrack" aria-hidden="true"><div id="progressFill"></div></div>
+<div id="progressPct" aria-hidden="true">0%</div>
 
 <!-- ================= TIMER ================= -->
 <div id="timerPill">
@@ -349,11 +360,33 @@ function showReader(title,content,isHtml){
   const body=$("readerBody"); body.style.fontSize=settings.fontSize+"px";
   body.innerHTML=isHtml? String(content||"") : mdToHtml(content); window.scrollTo(0,0);
   $("timerPill").classList.add("show"); timerReset();
+  $("progressTrack").classList.add("show"); $("progressPct").classList.add("show");
+  progressReset(); progressRequest();
 }
 function closeReader(){
   els.reader.style.display="none"; els.lib.style.display="block";
   $("timerPill").classList.remove("show"); timerPause(); window.scrollTo(0,0);
+  $("progressTrack").classList.remove("show"); $("progressPct").classList.remove("show");
 }
+
+/* ============ reading progress: 0% at top, 100% when the end reaches the viewport bottom ============ */
+/* The reader top bar shares this scroll handling: visible only at the very top, slides away once he starts scrolling. */
+const topBar=document.querySelector(".reader-top");
+let progTick=false;
+function progressPaint(){
+  progTick=false;
+  const doc=document.documentElement;
+  const max=doc.scrollHeight-window.innerHeight;
+  const y=window.scrollY||doc.scrollTop||0;
+  const p=max<=0?100:Math.min(100,Math.max(0,y/max*100));
+  $("progressFill").style.height=p+"%";
+  $("progressPct").textContent=Math.round(p)+"%";
+  if(topBar)topBar.classList.toggle("bar-hidden",y>10);
+}
+function progressReset(){ $("progressFill").style.height="0%"; $("progressPct").textContent="0%"; if(topBar)topBar.classList.remove("bar-hidden"); }
+function progressRequest(){ if(!progTick){ progTick=true; requestAnimationFrame(progressPaint); } }
+window.addEventListener("scroll",progressRequest,{passive:true});
+window.addEventListener("resize",progressRequest);
 
 /* ============ timer: orange <=5 min, red <=1 min, negative past zero ============ */
 let tRemain=settings.targetMinutes*60, tRun=false, tInt=null, tLast=0;
@@ -431,8 +464,8 @@ function showImport(){ let fileName="", pendingHtml="", pendingRawHtml="";
 $("groupBy").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
   groupMode=b.dataset.g; $("groupBy").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); render(); }));
 $("backBtn").addEventListener("click",closeReader);
-$("fontUp").addEventListener("click",()=>{settings.fontSize=Math.min(40,settings.fontSize+2);saveSettings();$("readerBody").style.fontSize=settings.fontSize+"px"});
-$("fontDown").addEventListener("click",()=>{settings.fontSize=Math.max(14,settings.fontSize-2);saveSettings();$("readerBody").style.fontSize=settings.fontSize+"px"});
+$("fontUp").addEventListener("click",()=>{settings.fontSize=Math.min(40,settings.fontSize+2);saveSettings();$("readerBody").style.fontSize=settings.fontSize+"px";progressRequest()});
+$("fontDown").addEventListener("click",()=>{settings.fontSize=Math.max(14,settings.fontSize-2);saveSettings();$("readerBody").style.fontSize=settings.fontSize+"px";progressRequest()});
 $("fsBtnLib").addEventListener("click",goFullscreen);
 $("fsBtnReader").addEventListener("click",goFullscreen);
 $("importBtn").addEventListener("click",showImport);
