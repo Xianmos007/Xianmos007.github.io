@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0a1e3c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Preach">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon.svg">
@@ -147,7 +147,7 @@
 
     <div class="count-line" id="countLine"></div>
     <div id="listHost"></div>
-    <div class="lib-foot">Preaching App · v5 · Updated Nov 10, 2026 · <button type="button" class="lib-update" id="updateCheck">Check for updates</button></div>
+    <div class="lib-foot">Preaching App · v6 · Updated Nov 10, 2026 · <button type="button" class="lib-update" id="updateCheck">Check for updates</button></div>
   </div>
 </section>
 
@@ -356,9 +356,10 @@ async function openSermon(id){
   if(imp.html||imp.format==="html")showReader(imp.title,imp.html||"",true);
   else showReader(imp.title,imp.markdown||"",false);
 }
+function setTheme(c){ const m=document.querySelector('meta[name="theme-color"]'); if(m)m.setAttribute("content",c); }
 function showReader(title,content,isHtml){
   current=title;
-  els.lib.style.display="none"; els.reader.style.display="block";
+  els.lib.style.display="none"; els.reader.style.display="block"; setTheme("#ffffff");
   $("readerTitle").textContent=title;
   const body=$("readerBody"); body.style.fontSize=settings.fontSize+"px";
   body.innerHTML=isHtml? String(content||"") : mdToHtml(content); window.scrollTo(0,0);
@@ -367,7 +368,7 @@ function showReader(title,content,isHtml){
   progressReset(); progressRequest();
 }
 function closeReader(){
-  els.reader.style.display="none"; els.lib.style.display="block";
+  els.reader.style.display="none"; els.lib.style.display="block"; setTheme("#0a1e3c");
   $("timerPill").classList.remove("show"); timerPause(); window.scrollTo(0,0);
   $("progressTrack").classList.remove("show"); $("progressPct").classList.remove("show");
 }
@@ -461,6 +462,13 @@ function showImport(){ let fileName="", pendingHtml="", pendingRawHtml="";
     IMPORTS.push(item); await DB.put("imports",item.id,item).catch(()=>{}); finishSave(); });
 }
 
+/* In iOS standalone (home-screen) mode the Fullscreen API does not exist and
+   standalone already fills the screen, so the Full screen buttons only confuse.
+   Hide them there; in a normal browser tab they keep their toggle behavior. */
+if((window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true){
+  ["fsBtnLib","fsBtnReader"].forEach(id=>{ const b=document.getElementById(id); if(b)b.style.display="none"; });
+}
+
 /* ============ wire up ============ */
 [els.search].forEach(el=>el.addEventListener("input",render));
 [els.book,els.series,els.scripture,els.year].forEach(el=>el.addEventListener("change",render));
@@ -471,7 +479,7 @@ $("fontUp").addEventListener("click",()=>{settings.fontSize=Math.min(40,settings
 $("fontDown").addEventListener("click",()=>{settings.fontSize=Math.max(14,settings.fontSize-2);saveSettings();$("readerBody").style.fontSize=settings.fontSize+"px";progressRequest()});
 $("fsBtnLib").addEventListener("click",goFullscreen);
 $("updateCheck").addEventListener("click",()=>{ const u=new URL(location.href);
-  if(u.searchParams.get("v")!=="5"){ u.searchParams.set("v","5"); location.replace(u.toString()); }
+  if(u.searchParams.get("v")!=="6"){ u.searchParams.set("v","6"); location.replace(u.toString()); }
   else location.reload(); });
 $("fsBtnReader").addEventListener("click",goFullscreen);
 $("importBtn").addEventListener("click",showImport);
