@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Preaching App</title>
+<meta name="theme-color" content="#0a1e3c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Preach">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --navy:#0a1e3c; --navy2:#0e2a52; --navy3:#12315e;
+    --accent:#38bdf8; --accent2:#7dd3fc;
+    --ink:#f2f7ff; --ink-dim:#9db8d9; --line:rgba(125,184,248,.18);
+    --card:rgba(255,255,255,.055);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;background:var(--navy);color:var(--ink)}
+  button{font-family:inherit;cursor:pointer}
+  select,input,textarea{font-family:inherit}
+
+  /* ---------- Library (dark navy) ---------- */
+  #libraryView{min-height:100vh;background:linear-gradient(180deg,#0a1e3c 0%,#081730 100%);padding:calc(env(safe-area-inset-top,0px) + 26px) 20px 60px}
+  .lib-wrap{max-width:860px;margin:0 auto}
+  .lib-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  h1.lib-title{font-size:44px;font-weight:800;letter-spacing:-.02em;margin:0}
+  .lib-sub{color:var(--ink-dim);font-size:15px;margin-top:6px}
+  .lib-actions{display:flex;gap:10px}
+  .btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:10px 18px;font-size:15px;font-weight:600}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#06263f}
+  .btn:active{transform:scale(.98)}
+  .search-pill{margin-top:22px;background:rgba(255,255,255,.09);border:1px solid var(--line);border-radius:999px;display:flex;align-items:center;gap:10px;padding:13px 18px}
+  .search-pill span{color:var(--ink-dim);font-size:17px}
+  .search-pill input{flex:1;background:none;border:none;outline:none;color:var(--ink);font-size:17px;min-width:0}
+  .search-pill input::placeholder{color:var(--ink-dim)}
+  .filters{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .filters select{background:var(--navy3);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:9px 14px;font-size:14px;max-width:230px}
+  .groupby{display:flex;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:999px;padding:3px}
+  .groupby button{border:none;background:none;color:var(--ink-dim);padding:7px 14px;border-radius:999px;font-size:14px;font-weight:600}
+  .groupby button.on{background:var(--accent);color:#06263f}
+  .count-line{color:var(--ink-dim);font-size:13.5px;margin:20px 2px 0}
+  .group-title{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);margin:26px 2px 10px}
+  .row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 17px;margin-bottom:9px;color:var(--ink)}
+  .row:active{background:rgba(255,255,255,.11)}
+  .row-main{flex:1;min-width:0}
+  .row-title{font-size:17px;font-weight:650;line-height:1.25}
+  .row-meta{color:var(--ink-dim);font-size:13.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge{flex:none;font-size:11.5px;font-weight:700;letter-spacing:.04em;padding:5px 9px;border-radius:999px;background:rgba(56,189,248,.16);color:var(--accent2)}
+  .badge.saved{background:rgba(52,211,153,.18);color:#6ee7b7}
+  .badge.stub{background:rgba(251,191,36,.14);color:#fcd34d}
+  .empty{color:var(--ink-dim);text-align:center;padding:44px 10px;font-size:16px}
+
+  /* ---------- Reader (white, Apple Books) ---------- */
+  #readerView{display:none;min-height:100vh;background:#fff;color:#1c1c1e}
+  .reader-top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(0,0,0,.07);padding-top:env(safe-area-inset-top,0px)}
+  .reader-top-in{max-width:980px;margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:8px}
+  .rbtn{border:none;background:rgba(0,0,0,.05);color:#0071e3;border-radius:999px;padding:8px 14px;font-size:15px;font-weight:600}
+  .rbtn.dark{color:#1c1c1e}
+  .reader-title{flex:1;text-align:center;font-size:14.5px;font-weight:600;color:#3a3a3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
+  .reader-body{max-width:980px;margin:0 auto;padding:28px 22px 190px;font-family:"New York",Georgia,"Times New Roman",serif;font-size:22px;line-height:1.62;color:#1c1c1e}
+  .reader-body h1{font-size:1.55em;line-height:1.2;font-weight:700;margin:.4em 0 .6em}
+  .reader-body h2{font-size:1.28em;line-height:1.25;margin:1.3em 0 .5em}
+  .reader-body h3{font-size:1.12em;margin:1.2em 0 .45em}
+  .reader-body p{margin:0 0 .95em}
+  .reader-body blockquote{margin:0 0 1em;padding:.2em 0 .2em 1em;border-left:3px solid #d1d1d6;color:#3a3a3c}
+  .reader-body ul,.reader-body ol{margin:0 0 1em;padding-left:1.35em}
+  .reader-body li{margin-bottom:.35em}
+  .reader-body hr{border:none;border-top:1px solid #e5e5ea;margin:1.6em 0}
+  .reader-body a{color:#0071e3}
+
+  /* ---------- Timer pill ---------- */
+  #timerPill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:30;display:none;align-items:center;gap:12px;background:rgba(28,28,30,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#fff;border-radius:999px;padding:10px 12px 10px 20px;box-shadow:0 10px 34px rgba(0,0,0,.28);max-width:94vw;flex-wrap:wrap;justify-content:center}
+  #timerPill.show{display:flex}
+  #timerDisplay{font-size:27px;font-weight:700;font-variant-numeric:tabular-nums;min-width:104px;text-align:center}
+  #timerPill.warn{background:rgba(146,64,14,.92)}
+  #timerPill.danger{background:rgba(153,27,27,.94)}
+  .tbtn{border:none;border-radius:999px;padding:9px 15px;font-size:14.5px;font-weight:650;background:rgba(255,255,255,.16);color:#fff}
+  .tbtn.main{background:#fff;color:#1c1c1e}
+  #timerEdit{display:none;align-items:center;gap:8px}
+  #timerEdit.show{display:flex}
+  #timerEdit input{width:64px;border:none;border-radius:10px;padding:8px;font-size:16px;text-align:center}
+  .preset{border:1px solid rgba(255,255,255,.35);background:none;color:#fff;border-radius:999px;padding:7px 11px;font-size:13.5px}
+
+  /* ---------- Modal ---------- */
+  #modalWrap{display:none;position:fixed;inset:0;z-index:50;background:rgba(3,10,24,.66);align-items:center;justify-content:center;padding:20px}
+  #modalWrap.show{display:flex}
+  .modal{background:#0e2a52;border:1px solid var(--line);border-radius:22px;max-width:560px;width:100%;max-height:86vh;overflow:auto;padding:24px;color:var(--ink)}
+  .modal h2{margin:0 0 12px;font-size:21px}
+  .modal p{color:var(--ink-dim);line-height:1.5;font-size:15px}
+  .modal input[type=text]{width:100%;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:11px 13px;font-size:16px;margin-bottom:10px}
+  .modal textarea{width:100%;min-height:170px;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:11px 13px;font-size:14.5px}
+  .modal .btnrow{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+  @media (max-width:560px){ h1.lib-title{font-size:36px} .reader-body{padding-left:20px;padding-right:20px} }
+</style>
+</head>
+<body>
+
+<!-- ================= LIBRARY ================= -->
+<section id="libraryView">
+  <div class="lib-wrap">
+    <div class="lib-head">
+      <div>
+        <h1 class="lib-title">Library</h1>
+        <div class="lib-sub" id="libSub">Your sermons, stored only on this device</div>
+      </div>
+      <div class="lib-actions">
+        <button class="btn" id="importBtn">Import</button>
+        <button class="btn" id="fsBtnLib">⛶ Full screen</button>
+      </div>
+    </div>
+
+    <label class="search-pill"><span>⌕</span><input id="searchInput" type="search" placeholder="Search title, scripture, book, series…" autocomplete="off"></label>
+
+    <div class="filters">
+      <select id="bookFilter"><option value="">Book: All</option></select>
+      <select id="seriesFilter"><option value="">Series: All</option></select>
+      <select id="scriptureFilter"><option value="">Scripture: All</option></select>
+      <select id="yearFilter"><option value="">Date: All years</option></select>
+      <div class="groupby" id="groupBy" role="group" aria-label="Group by">
+        <button data-g="date" class="on">Date</button><button data-g="book">Book</button><button data-g="series">Series</button><button data-g="az">A–Z</button>
+      </div>
+    </div>
+
+    <div class="count-line" id="countLine"></div>
+    <div id="listHost"></div>
+  </div>
+</section>
+
+<!-- ================= READER ================= -->
+<section id="readerView">
+  <div class="reader-top"><div class="reader-top-in">
+    <button class="rbtn" id="backBtn">‹ Library</button>
+    <div class="reader-title" id="readerTitle"></div>
+    <button class="rbtn dark" id="fontDown" aria-label="Smaller text">A−</button>
+    <button class="rbtn dark" id="fontUp" aria-label="Larger text">A+</button>
+    <button class="rbtn" id="fsBtnReader">⛶ Full</button>
+  </div></div>
+  <article class="reader-body" id="readerBody"></article>
+</section>
+
+<!-- ================= TIMER ================= -->
+<div id="timerPill">
+  <div id="timerDisplay">40:00</div>
+  <button class="tbtn main" id="timerToggle">Start</button>
+  <button class="tbtn" id="timerReset">Reset</button>
+  <button class="tbtn" id="timerSetBtn">Set</button>
+  <div id="timerEdit">
+    <input id="timerMinutes" type="number" min="1" max="240" inputmode="numeric">
+    <button class="preset" data-m="30">30</button><button class="preset" data-m="35">35</button>
+    <button class="preset" data-m="40">40</button><button class="preset" data-m="45">45</button>
+    <button class="preset" data-m="60">60</button>
+    <button class="tbtn main" id="timerApply">Done</button>
+  </div>
+</div>
+
+<!-- ================= MODAL ================= -->
+<div id="modalWrap"><div class="modal" id="modalBox"></div></div>
+
+<script>
+"use strict";
+/* ============ settings (remembered) ============ */
+const SKEY="preaching-app-settings-v1";
+let settings={fontSize:22,targetMinutes:40};
+try{Object.assign(settings,JSON.parse(localStorage.getItem(SKEY)||"{}"))}catch(e){}
+function saveSettings(){try{localStorage.setItem(SKEY,JSON.stringify(settings))}catch(e){}}
+
+/* ============ on-device cache: IndexedDB, localStorage fallback ============ */
+const DB={db:null,
+  open(){return new Promise(res=>{ if(!("indexedDB" in window))return res(false);
+    const rq=indexedDB.open("preaching-app-v1",1);
+    rq.onupgradeneeded=()=>{rq.result.createObjectStore("sermons");rq.result.createObjectStore("imports");};
+    rq.onsuccess=()=>{DB.db=rq.result;res(true)}; rq.onerror=()=>res(false); });},
+  _tx(store,mode,fn){return new Promise((res,rej)=>{ if(!DB.db)return rej(new Error("no db"));
+    const rq=fn(DB.db.transaction(store,mode).objectStore(store));
+    rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); });},
+  async get(store,key){ if(DB.db)return DB._tx(store,"readonly",s=>s.get(key));
+    try{const v=localStorage.getItem("idb:"+store+":"+key);return v?JSON.parse(v):undefined}catch(e){return undefined} },
+  async put(store,key,val){ if(DB.db)return DB._tx(store,"readwrite",s=>s.put(val,key));
+    try{localStorage.setItem("idb:"+store+":"+key,JSON.stringify(val))}catch(e){} },
+  async keys(store){ if(DB.db)return DB._tx(store,"readonly",s=>s.getAllKeys());
+    const out=[]; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith("idb:"+store+":"))out.push(k.slice(("idb:"+store+":").length))} return out; },
+  async all(store){ if(DB.db)return DB._tx(store,"readonly",s=>s.getAll());
+    const ks=await DB.keys(store),out=[]; for(const k of ks)out.push(await DB.get(store,k)); return out; }
+};
+
+/* ============ minimal markdown renderer ============ */
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function inline(s){return esc(s)
+  .replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/__([^_]+)__/g,"<strong>$1</strong>")
+  .replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<em>$2</em>").replace(/`([^`]+)`/g,"<code>$1</code>")
+  .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');}
+function mdToHtml(md){
+  const lines=String(md||"").split(/\r?\n/); let html="",list=null,para=[];
+  const flushPara=()=>{if(para.length){html+="<p>"+inline(para.join(" "))+"</p>";para=[]}};
+  const closeList=()=>{if(list){html+="</"+list+">";list=null}};
+  for(let raw of lines){ const line=raw.replace(/\s+$/,""); const t=line.trim();
+    if(!t){flushPara();closeList();continue}
+    const h=t.match(/^(#{1,4})\s+(.*)/); if(h){flushPara();closeList();const n=h[1].length;html+="<h"+n+">"+inline(h[2])+"</h"+n+">";continue}
+    if(/^([-*_])(\s*\1){2,}$/.test(t)){flushPara();closeList();html+="<hr>";continue}
+    if(t.startsWith(">")){flushPara();closeList();html+="<blockquote>"+inline(t.replace(/^>\s?/,""))+"</blockquote>";continue}
+    const ul=t.match(/^[-*+]\s+(.*)/); if(ul){flushPara();if(list!=="ul"){closeList();html+="<ul>";list="ul"}html+="<li>"+inline(ul[1])+"</li>";continue}
+    const ol=t.match(/^\d+[.)]\s+(.*)/); if(ol){flushPara();if(list!=="ol"){closeList();html+="<ol>";list="ol"}html+="<li>"+inline(ol[1])+"</li>";continue}
+    para.push(t);
+  }
+  flushPara();closeList(); return html;
+}
+
+/* ============ state ============ */
+let IMPORTS=[];
+let groupMode="date";
+const $=id=>document.getElementById(id);
+const els={lib:$("libraryView"),reader:$("readerView"),list:$("listHost"),count:$("countLine"),
+  search:$("searchInput"),book:$("bookFilter"),series:$("seriesFilter"),scripture:$("scriptureFilter"),year:$("yearFilter")};
+
+function fillSelect(sel,vals,label){ const cur=sel.value;
+  sel.innerHTML='<option value="">'+label+'</option>'+vals.map(v=>'<option value="'+esc(v)+'">'+esc(v)+"</option>").join("");
+  if(vals.includes(cur))sel.value=cur; }
+
+function filtered(){
+  const q=els.search.value.trim().toLowerCase();
+  let all=IMPORTS.map(i=>({id:i.id,title:i.title,book:i.book||"",scripture:i.scripture||"",series:i.series||"",date:i.date||"",year:i.year||(i.date||"").slice(0,4),available:true,imported:true,words:(i.markdown||"").split(/\s+/).length}));
+  return all.filter(s=>{
+    if(q && !(s.title+" "+(s.scripture||"")+" "+(s.book||"")+" "+(s.series||"")).toLowerCase().includes(q))return false;
+    if(els.book.value && s.book!==els.book.value)return false;
+    if(els.series.value && (s.series||"")!==els.series.value)return false;
+    if(els.scripture.value && (s.scripture||"")!==els.scripture.value)return false;
+    if(els.year.value && (s.year||"")!==els.year.value)return false;
+    return true; });
+}
+function groupKey(s){
+  if(groupMode==="book")return s.book||"Other passages";
+  if(groupMode==="series")return s.series||"Standalone";
+  if(groupMode==="az")return (s.title.trim()[0]||"#").toUpperCase();
+  return s.year||"Undated";
+}
+function render(){
+  const items=filtered();
+  els.count.textContent=IMPORTS.length? items.length+" shown · "+IMPORTS.length+" imported on this device" : "";
+  if(!items.length){els.list.innerHTML= IMPORTS.length? '<div class="empty">No sermons match those filters.</div>' : '<div class="empty">No sermons yet.<br><br>Tap <strong>Import</strong> to add your first sermon: paste the text or choose a .md / .txt file.<br>Imported sermons are stored <strong>only on this device</strong> and are never uploaded.<br><br><button class="btn primary" id="emptyImportBtn">Import a sermon</button></div>';
+    const eb=document.getElementById("emptyImportBtn"); if(eb)eb.addEventListener("click",showImport); return}
+  const groups=new Map();
+  for(const s of items){const k=groupKey(s); if(!groups.has(k))groups.set(k,[]); groups.get(k).push(s)}
+  let keys=[...groups.keys()];
+  if(groupMode==="date")keys.sort((a,b)=>b.localeCompare(a));
+  else if(groupMode==="az")keys.sort();
+  else keys.sort((a,b)=>a.localeCompare(b));
+  els.list.innerHTML=keys.map(k=>{
+    const rows=groups.get(k).slice().sort((a,b)=> groupMode==="date" ? (b.date||"").localeCompare(a.date||"") : a.title.localeCompare(b.title))
+      .map(s=>{
+        const meta=[s.scripture,s.series,s.date].filter(Boolean).join(" · ");
+        const badge='<span class="badge saved">On device</span>';
+        return '<button class="row" data-id="'+esc(s.id)+'"><span class="row-main"><span class="row-title">'+esc(s.title)+'</span><span class="row-meta" style="display:block">'+esc(meta)+'</span></span>'+badge+"</button>";
+      }).join("");
+    return '<div class="group-title">'+esc(k)+"</div>"+rows;
+  }).join("");
+  els.list.querySelectorAll(".row").forEach(b=>b.addEventListener("click",()=>openSermon(b.dataset.id)));
+}
+
+/* ============ open a sermon: imported sermons only, stored on this device ============ */
+let current=null;
+async function openSermon(id){
+  const imp=IMPORTS.find(i=>i.id===id);
+  if(imp){showReader(imp.title,imp.markdown);return}
+}
+function showReader(title,markdown){
+  current=title;
+  els.lib.style.display="none"; els.reader.style.display="block";
+  $("readerTitle").textContent=title;
+  const body=$("readerBody"); body.style.fontSize=settings.fontSize+"px";
+  body.innerHTML=mdToHtml(markdown); window.scrollTo(0,0);
+  $("timerPill").classList.add("show"); timerReset();
+}
+function closeReader(){
+  els.reader.style.display="none"; els.lib.style.display="block";
+  $("timerPill").classList.remove("show"); timerPause(); window.scrollTo(0,0);
+}
+
+/* ============ timer: orange <=5 min, red <=1 min, negative past zero ============ */
+let tRemain=settings.targetMinutes*60, tRun=false, tInt=null, tLast=0;
+function fmt(s){const neg=s<0; s=Math.abs(Math.round(s)); return (neg?"−":"")+String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
+function timerPaint(){ const d=$("timerDisplay"); d.textContent=fmt(tRemain);
+  const pill=$("timerPill"); pill.classList.toggle("danger",tRemain<=60); pill.classList.toggle("warn",tRemain>60&&tRemain<=300); }
+function timerTick(){ const now=Date.now(); tRemain-=(now-tLast)/1000; tLast=now; timerPaint(); }
+function timerStart(){ if(tRun)return; tRun=true; tLast=Date.now(); tInt=setInterval(timerTick,250); $("timerToggle").textContent="Pause"; }
+function timerPause(){ tRun=false; if(tInt)clearInterval(tInt); tInt=null; $("timerToggle").textContent="Start"; }
+function timerReset(){ timerPause(); tRemain=settings.targetMinutes*60; timerPaint(); }
+
+/* ============ fullscreen ============ */
+function goFullscreen(){ const el=document.documentElement;
+  if(document.fullscreenElement){document.exitFullscreen&&document.exitFullscreen()}
+  else if(el.requestFullscreen)el.requestFullscreen().catch(()=>{});
+  else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen(); }
+
+/* ============ import parsing: Obsidian frontmatter welcome ============ */
+function parseImport(raw){
+  let text=String(raw||""), meta={};
+  const m=text.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n?/);
+  if(m){ text=text.slice(m[0].length);
+    for(const line of m[1].split(/\r?\n/)){ const kv=line.match(/^([A-Za-z_ -]+):\s*(.*)$/); if(!kv)continue;
+      const k=kv[1].trim().toLowerCase(), v=kv[2].trim().replace(/^["']|["']$/g,"");
+      if(k==="title")meta.title=v; else if(k==="book")meta.book=v; else if(k==="scripture")meta.scripture=v;
+      else if(k==="series")meta.series=v; else if(k==="date"||k==="modified")meta.date=v.slice(0,10); } }
+  if(!meta.title){ const h=text.match(/^#\s+(.+)$/m); if(h)meta.title=h[1].trim(); }
+  meta.body=text.trim(); return meta;
+}
+
+/* ============ modal + import ============ */
+function showModal(title,html){ $("modalBox").innerHTML="<h2>"+esc(title)+"</h2>"+html+'<div class="btnrow"><button class="btn" onclick="document.getElementById(\'modalWrap\').classList.remove(\'show\')">Close</button></div>'; $("modalWrap").classList.add("show"); }
+function showImport(){ let fileName=""; $("modalBox").innerHTML=
+  "<h2>Import a sermon</h2><p>Paste text or Markdown, or choose a .md / .txt file. Imported sermons are stored <strong>only on this device</strong> and are never uploaded.</p>"+
+  '<input type="text" id="impTitle" placeholder="Title">'+
+  '<textarea id="impText" placeholder="Paste the sermon text here…"></textarea>'+
+  '<div class="btnrow"><label class="btn" style="display:inline-block">Choose file<input type="file" id="impFile" accept=".md,.txt,text/plain,text/markdown" style="display:none"></label>'+
+  '<button class="btn primary" id="impSave">Save on this device</button>'+
+  '<button class="btn" onclick="document.getElementById(\'modalWrap\').classList.remove(\'show\')">Cancel</button></div>';
+  $("modalWrap").classList.add("show");
+  $("impFile").addEventListener("change",async e=>{ const f=e.target.files[0]; if(!f)return; fileName=f.name;
+    $("impText").value=await f.text(); });
+  $("impSave").addEventListener("click",async()=>{ const raw=$("impText").value;
+    if(!raw.trim()){alert("Paste or choose the sermon text first.");return}
+    const p=parseImport(raw);
+    const title=$("impTitle").value.trim()||p.title||fileName.replace(/\.(md|txt)$/i,"")||"Imported sermon";
+    const item={id:"import-"+Date.now(),title:title,markdown:p.body||raw.trim(),book:p.book||"",scripture:p.scripture||"",series:p.series||"",date:p.date||"",year:(p.date||"").slice(0,4)};
+    IMPORTS.push(item); await DB.put("imports",item.id,item).catch(()=>{});
+    $("libSub").textContent=IMPORTS.length+" sermon"+(IMPORTS.length===1?"":"s")+" on this device";
+    populateFilters();
+    $("modalWrap").classList.remove("show"); render(); });
+}
+
+/* ============ wire up ============ */
+[els.search].forEach(el=>el.addEventListener("input",render));
+[els.book,els.series,els.scripture,els.year].forEach(el=>el.addEventListener("change",render));
+$("groupBy").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+  groupMode=b.dataset.g; $("groupBy").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); render(); }));
+$("backBtn").addEventListener("click",closeReader);
+$("fontUp").addEventListener("click",()=>{settings.fontSize=Math.min(40,settings.fontSize+2);saveSettings();$("readerBody").style.fontSize=settings.fontSize+"px"});
+$("fontDown").addEventListener("click",()=>{settings.fontSize=Math.max(14,settings.fontSize-2);saveSettings();$("readerBody").style.fontSize=settings.fontSize+"px"});
+$("fsBtnLib").addEventListener("click",goFullscreen);
+$("fsBtnReader").addEventListener("click",goFullscreen);
+$("importBtn").addEventListener("click",showImport);
+$("modalWrap").addEventListener("click",e=>{if(e.target.id==="modalWrap")e.currentTarget.classList.remove("show")});
+$("timerToggle").addEventListener("click",()=>tRun?timerPause():timerStart());
+$("timerReset").addEventListener("click",timerReset);
+$("timerSetBtn").addEventListener("click",()=>{ $("timerMinutes").value=settings.targetMinutes; $("timerEdit").classList.toggle("show"); });
+$("timerApply").addEventListener("click",()=>{ const v=parseInt($("timerMinutes").value,10);
+  if(v>=1&&v<=240){settings.targetMinutes=v;saveSettings();timerReset()} $("timerEdit").classList.remove("show"); });
+document.querySelectorAll(".preset").forEach(b=>b.addEventListener("click",()=>{ settings.targetMinutes=parseInt(b.dataset.m,10); saveSettings(); $("timerMinutes").value=settings.targetMinutes; timerReset(); }));
+
+function populateFilters(){
+  const uniq=fn=>[...new Set(IMPORTS.map(fn).filter(Boolean))].sort();
+  fillSelect(els.book,uniq(s=>s.book),"Book: All");
+  fillSelect(els.series,uniq(s=>s.series),"Series: All");
+  fillSelect(els.scripture,uniq(s=>s.scripture),"Scripture: All");
+  fillSelect(els.year,uniq(s=>s.year||(s.date||"").slice(0,4)).sort().reverse(),"Date: All years");
+}
+(async function init(){
+  await DB.open();
+  IMPORTS=await DB.all("imports").catch(()=>[]);
+  $("libSub").textContent=IMPORTS.length? IMPORTS.length+" sermon"+(IMPORTS.length===1?"":"s")+" on this device" : "Import a sermon to get started";
+  populateFilters();
+  timerPaint(); render();
+})();
+</script>
+</body>
+</html>
