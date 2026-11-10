@@ -45,6 +45,8 @@
   .groupby button{border:none;background:none;color:var(--ink-dim);padding:7px 14px;border-radius:999px;font-size:14px;font-weight:600}
   .groupby button.on{background:var(--accent);color:#06263f}
   .count-line{color:var(--ink-dim);font-size:13.5px;margin:20px 2px 0}
+  .lib-foot{color:rgba(180,200,230,.45);font-size:12px;margin:44px 2px 0;text-align:center}
+  .lib-update{background:none;border:none;color:rgba(150,190,245,.65);font-size:12px;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px}
   .group-title{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);margin:26px 2px 10px}
   .row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 17px;margin-bottom:9px;color:var(--ink)}
   .row:active{background:rgba(255,255,255,.11)}
@@ -145,6 +147,7 @@
 
     <div class="count-line" id="countLine"></div>
     <div id="listHost"></div>
+    <div class="lib-foot">Preaching App · v5 · Updated Nov 10, 2026 · <button type="button" class="lib-update" id="updateCheck">Check for updates</button></div>
   </div>
 </section>
 
@@ -467,6 +470,9 @@ $("backBtn").addEventListener("click",closeReader);
 $("fontUp").addEventListener("click",()=>{settings.fontSize=Math.min(40,settings.fontSize+2);saveSettings();$("readerBody").style.fontSize=settings.fontSize+"px";progressRequest()});
 $("fontDown").addEventListener("click",()=>{settings.fontSize=Math.max(14,settings.fontSize-2);saveSettings();$("readerBody").style.fontSize=settings.fontSize+"px";progressRequest()});
 $("fsBtnLib").addEventListener("click",goFullscreen);
+$("updateCheck").addEventListener("click",()=>{ const u=new URL(location.href);
+  if(u.searchParams.get("v")!=="5"){ u.searchParams.set("v","5"); location.replace(u.toString()); }
+  else location.reload(); });
 $("fsBtnReader").addEventListener("click",goFullscreen);
 $("importBtn").addEventListener("click",showImport);
 $("modalWrap").addEventListener("click",e=>{if(e.target.id==="modalWrap")e.currentTarget.classList.remove("show")});
