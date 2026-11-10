@@ -60,11 +60,11 @@
   #readerView{display:none;min-height:100vh;background:#fff;color:#1c1c1e}
   .reader-top{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid rgba(0,0,0,.07);padding-top:env(safe-area-inset-top,0px);transition:transform .28s ease,opacity .28s ease}
   .reader-top.bar-hidden{transform:translateY(-100%);opacity:0;pointer-events:none}
-  .reader-top-in{max-width:980px;margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:8px}
+  .reader-top-in{max-width:1160px;margin:0 auto;padding:10px 12px;display:flex;align-items:center;gap:8px}
   .rbtn{border:none;background:rgba(0,0,0,.05);color:#0071e3;border-radius:999px;padding:8px 14px;font-size:15px;font-weight:600}
   .rbtn.dark{color:#1c1c1e}
   .reader-title{flex:1;text-align:center;font-size:14.5px;font-weight:600;color:#3a3a3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
-  .reader-body{max-width:980px;margin:0 auto;padding:28px 22px 190px;font-family:"New York",Georgia,"Times New Roman",serif;font-size:22px;line-height:1.62;color:#1c1c1e}
+  .reader-body{max-width:1160px;margin:0 auto;padding:28px 12px 190px;font-family:"New York",Georgia,"Times New Roman",serif;font-size:22px;line-height:1.62;color:#1c1c1e}
   .reader-body h1{font-size:1.55em;line-height:1.2;font-weight:700;margin:.4em 0 .6em}
   .reader-body h2{font-size:1.28em;line-height:1.25;margin:1.3em 0 .5em}
   .reader-body h3{font-size:1.12em;margin:1.2em 0 .45em}
@@ -112,7 +112,7 @@
   #progressFill{width:100%;height:0%;background:var(--accent);border-radius:0 0 3px 3px}
   #progressPct{position:fixed;right:11px;bottom:calc(env(safe-area-inset-bottom,0px) + 94px);z-index:15;display:none;font-size:12px;font-weight:600;color:#8e8e93;background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:2px 7px;border-radius:999px;font-variant-numeric:tabular-nums}
   #progressPct.show{display:block}
-  @media (max-width:560px){ h1.lib-title{font-size:36px} .reader-body{padding-left:20px;padding-right:20px} }
+  @media (max-width:560px){ h1.lib-title{font-size:36px} .reader-body{padding-left:12px;padding-right:12px} }
 </style>
 </head>
 <body>
