@@ -66,7 +66,7 @@
   .rbtn{border:none;background:rgba(0,0,0,.05);color:#0071e3;border-radius:999px;padding:8px 14px;font-size:15px;font-weight:600}
   .rbtn.dark{color:#1c1c1e}
   .reader-title{flex:1;text-align:center;font-size:14.5px;font-weight:600;color:#3a3a3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
-  .reader-body{max-width:1160px;margin:0 auto;padding:28px 12px 190px;font-family:"New York",Georgia,"Times New Roman",serif;font-size:22px;line-height:1.62;color:#1c1c1e}
+  .reader-body{max-width:1160px;margin:0 auto;padding:28px 12px 80px;font-family:"New York",Georgia,"Times New Roman",serif;font-size:22px;line-height:1.62;color:#1c1c1e}
   .reader-body h1{font-size:1.55em;line-height:1.2;font-weight:700;margin:.4em 0 .6em}
   .reader-body h2{font-size:1.28em;line-height:1.25;margin:1.3em 0 .5em}
   .reader-body h3{font-size:1.12em;margin:1.2em 0 .45em}
@@ -81,15 +81,17 @@
   .reader-body table{border-collapse:collapse;margin:0 0 1em}
   .reader-body td,.reader-body th{border:1px solid #d1d1d6;padding:6px 10px}
 
-  /* ---------- Timer pill ---------- */
-  #timerPill{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:30;display:none;align-items:center;gap:12px;background:rgba(28,28,30,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#fff;border-radius:999px;padding:10px 12px 10px 20px;box-shadow:0 10px 34px rgba(0,0,0,.28);max-width:94vw;flex-wrap:wrap;justify-content:center}
+  /* ---------- Timer pill (top right, always visible in reader) ---------- */
+  #timerPill{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;z-index:40;display:none;flex-direction:column;align-items:flex-end;gap:6px;color:#fff}
   #timerPill.show{display:flex}
-  #timerDisplay{font-size:27px;font-weight:700;font-variant-numeric:tabular-nums;min-width:104px;text-align:center}
-  #timerPill.warn{background:rgba(146,64,14,.92)}
-  #timerPill.danger{background:rgba(153,27,27,.94)}
+  #timerDisplay{border:none;cursor:pointer;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;text-align:center;color:#fff;background:rgba(28,28,30,.86);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:999px;padding:8px 14px;box-shadow:0 6px 22px rgba(0,0,0,.25)}
+  #timerPill.warn #timerDisplay{background:rgba(146,64,14,.94)}
+  #timerPill.danger #timerDisplay{background:rgba(153,27,27,.96)}
+  #timerPanel{display:none;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;background:rgba(28,28,30,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:18px;padding:10px;box-shadow:0 10px 34px rgba(0,0,0,.28);max-width:min(330px,94vw)}
+  #timerPanel.show{display:flex}
   .tbtn{border:none;border-radius:999px;padding:9px 15px;font-size:14.5px;font-weight:650;background:rgba(255,255,255,.16);color:#fff}
   .tbtn.main{background:#fff;color:#1c1c1e}
-  #timerEdit{display:none;align-items:center;gap:8px}
+  #timerEdit{display:none;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
   #timerEdit.show{display:flex}
   #timerEdit .tlabel{font-size:13.5px;color:rgba(255,255,255,.85);white-space:nowrap}
   #timerEdit input{width:76px;border:none;border-radius:10px;padding:8px;font-size:16px;text-align:center}
@@ -114,7 +116,7 @@
   #progressTrack{position:fixed;top:0;right:0;width:5px;height:100%;height:100dvh;background:rgba(10,30,60,.08);z-index:15;display:none}
   #progressTrack.show{display:block}
   #progressFill{width:100%;height:0%;background:var(--accent);border-radius:0 0 3px 3px}
-  #progressPct{position:fixed;right:11px;bottom:calc(env(safe-area-inset-bottom,0px) + 94px);z-index:15;display:none;font-size:12px;font-weight:600;color:#8e8e93;background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:2px 7px;border-radius:999px;font-variant-numeric:tabular-nums}
+  #progressPct{position:fixed;right:11px;top:calc(env(safe-area-inset-top,0px) + 54px);z-index:15;display:none;font-size:12px;font-weight:600;color:#8e8e93;background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:2px 7px;border-radius:999px;font-variant-numeric:tabular-nums}
   #progressPct.show{display:block}
   @media (max-width:560px){ h1.lib-title{font-size:36px} .reader-body{padding-left:12px;padding-right:12px} }
 </style>
@@ -149,7 +151,7 @@
 
     <div class="count-line" id="countLine"></div>
     <div id="listHost"></div>
-    <div class="lib-foot">Preaching App · v7 · Updated Nov 10, 2026 · <button type="button" class="lib-update" id="updateCheck">Check for updates</button></div>
+    <div class="lib-foot">Preaching App · v8 · Updated Nov 11, 2026 · <button type="button" class="lib-update" id="updateCheck">Check for updates</button></div>
   </div>
 </section>
 
@@ -169,19 +171,21 @@
 <div id="progressTrack" aria-hidden="true"><div id="progressFill"></div></div>
 <div id="progressPct" aria-hidden="true">0%</div>
 
-<!-- ================= TIMER ================= -->
+<!-- ================= TIMER (top-right pill; tap to expand controls) ================= -->
 <div id="timerPill">
-  <div id="timerDisplay">40:00</div>
-  <button class="tbtn main" id="timerToggle">Start</button>
-  <button class="tbtn" id="timerReset">Reset</button>
-  <button class="tbtn" id="timerSetBtn">Set</button>
-  <div id="timerEdit">
-    <label class="tlabel" for="timerMinutes">Minutes:</label>
-    <input id="timerMinutes" type="number" min="1" max="600" step="1" inputmode="numeric" placeholder="min">
-    <button class="tbtn main" id="timerApply">Apply</button>
-    <button class="preset" data-m="30">30</button><button class="preset" data-m="35">35</button>
-    <button class="preset" data-m="40">40</button><button class="preset" data-m="45">45</button>
-    <button class="preset" data-m="60">60</button>
+  <button id="timerDisplay" type="button" aria-label="Timer — tap for controls">40:00</button>
+  <div id="timerPanel">
+    <button class="tbtn main" id="timerToggle">Start</button>
+    <button class="tbtn" id="timerReset">Reset</button>
+    <button class="tbtn" id="timerSetBtn">Set</button>
+    <div id="timerEdit">
+      <label class="tlabel" for="timerMinutes">Minutes:</label>
+      <input id="timerMinutes" type="number" min="1" max="600" step="1" inputmode="numeric" placeholder="min">
+      <button class="tbtn main" id="timerApply">Apply</button>
+      <button class="preset" data-m="30">30</button><button class="preset" data-m="35">35</button>
+      <button class="preset" data-m="40">40</button><button class="preset" data-m="45">45</button>
+      <button class="preset" data-m="60">60</button>
+    </div>
   </div>
 </div>
 
@@ -366,7 +370,7 @@ function showReader(title,content,isHtml){
   $("readerTitle").textContent=title;
   const body=$("readerBody"); body.style.fontSize=settings.fontSize+"px";
   body.innerHTML=isHtml? String(content||"") : mdToHtml(content); window.scrollTo(0,0);
-  $("timerPill").classList.add("show"); timerReset();
+  $("timerPill").classList.add("show"); $("timerPanel").classList.remove("show"); $("timerEdit").classList.remove("show"); timerReset();
   $("progressTrack").classList.add("show"); $("progressPct").classList.add("show");
   progressReset(); progressRequest();
 }
@@ -482,11 +486,13 @@ $("fontUp").addEventListener("click",()=>{settings.fontSize=Math.min(40,settings
 $("fontDown").addEventListener("click",()=>{settings.fontSize=Math.max(14,settings.fontSize-2);saveSettings();$("readerBody").style.fontSize=settings.fontSize+"px";progressRequest()});
 $("fsBtnLib").addEventListener("click",goFullscreen);
 $("updateCheck").addEventListener("click",()=>{ const u=new URL(location.href);
-  if(u.searchParams.get("v")!=="7"){ u.searchParams.set("v","7"); location.replace(u.toString()); }
+  if(u.searchParams.get("v")!=="8"){ u.searchParams.set("v","8"); location.replace(u.toString()); }
   else location.reload(); });
 $("fsBtnReader").addEventListener("click",goFullscreen);
 $("importBtn").addEventListener("click",showImport);
 $("modalWrap").addEventListener("click",e=>{if(e.target.id==="modalWrap")e.currentTarget.classList.remove("show")});
+$("timerDisplay").addEventListener("click",()=>{ const p=$("timerPanel"); p.classList.toggle("show"); if(!p.classList.contains("show"))$("timerEdit").classList.remove("show"); });
+document.addEventListener("click",e=>{ const pill=$("timerPill"); if(pill.classList.contains("show")&&!pill.contains(e.target)){ $("timerPanel").classList.remove("show"); $("timerEdit").classList.remove("show"); } });
 $("timerToggle").addEventListener("click",()=>tRun?timerPause():timerStart());
 $("timerReset").addEventListener("click",timerReset);
 $("timerSetBtn").addEventListener("click",()=>{ const inp=$("timerMinutes"); inp.value=settings.targetMinutes; inp.classList.remove("invalid"); $("timerEdit").classList.toggle("show"); if($("timerEdit").classList.contains("show")){ inp.focus(); inp.select(); } });
