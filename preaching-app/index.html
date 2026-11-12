@@ -48,9 +48,12 @@
   .lib-foot{color:rgba(180,200,230,.45);font-size:12px;margin:44px 2px 0;text-align:center}
   .lib-update{background:none;border:none;color:rgba(150,190,245,.65);font-size:12px;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px}
   .group-title{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);margin:26px 2px 10px}
-  .row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 17px;margin-bottom:9px;color:var(--ink)}
-  .row:active{background:rgba(255,255,255,.11)}
+  .row{display:flex;align-items:center;gap:10px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 17px;margin-bottom:9px;color:var(--ink)}
+  .row-open{flex:1;min-width:0;display:flex;align-items:center;gap:14px;background:none;border:none;text-align:left;color:var(--ink);padding:0;font-size:inherit}
+  .row-open:active{opacity:.7}
   .row-main{flex:1;min-width:0}
+  .row-edit{flex:none;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--ink);border-radius:999px;padding:7px 13px;font-size:13.5px;font-weight:600}
+  .row-edit:active{transform:scale(.97)}
   .row-title{font-size:17px;font-weight:650;line-height:1.25}
   .row-meta{color:var(--ink-dim);font-size:13.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .badge{flex:none;font-size:11.5px;font-weight:700;letter-spacing:.04em;padding:5px 9px;border-radius:999px;background:rgba(56,189,248,.16);color:var(--accent2)}
@@ -105,6 +108,8 @@
   .modal h2{margin:0 0 12px;font-size:21px}
   .modal p{color:var(--ink-dim);line-height:1.5;font-size:15px}
   .modal input[type=text]{width:100%;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:11px 13px;font-size:16px;margin-bottom:10px}
+  .modal input[type=date]{width:100%;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:11px 13px;font-size:16px;margin-bottom:10px;color-scheme:dark}
+  .modal label{display:block;font-size:13px;font-weight:600;color:var(--ink-dim);margin:12px 0 5px}
   .modal textarea{width:100%;min-height:170px;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:11px 13px;font-size:14.5px}
   .modal .btnrow{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
   .pastezone{min-height:74px;background:rgba(255,255,255,.08);border:1px dashed var(--line);border-radius:12px;color:var(--ink);padding:11px 13px;font-size:14.5px;margin-bottom:10px;overflow:auto;max-height:180px}
@@ -151,7 +156,7 @@
 
     <div class="count-line" id="countLine"></div>
     <div id="listHost"></div>
-    <div class="lib-foot">Preaching App · v8 · Updated Nov 11, 2026 · <button type="button" class="lib-update" id="updateCheck">Check for updates</button></div>
+    <div class="lib-foot">Preaching App · v9 · Updated Nov 12, 2026 · <button type="button" class="lib-update" id="updateCheck">Check for updates</button></div>
   </div>
 </section>
 
@@ -296,11 +301,27 @@ function sanitizeHtml(rawHtml){
   let out=""; if(doc.body)doc.body.childNodes.forEach(n=>{out+=node(n)});
   return out.trim();
 }
+const SECTION_LABELS=/^(introducci[oó]n|introduction|conclusi[oó]n|conclusion|ep[ií]logo|pr[oó]logo|prologue|prefacio|preface|ap[eé]ndice|appendix|[ií]ndice|contents?|table of contents)$/i;
+function cleanDocTitle(t){ return String(t||"").replace(/\s+/g," ").trim().replace(/\.html?$/i,""); }
 function htmlDocTitle(rawHtml){
   const doc=new DOMParser().parseFromString(String(rawHtml||""),"text/html");
-  if(doc.title&&doc.title.trim())return doc.title.trim().replace(/\.html?$/i,"");
-  const h=doc.querySelector("h1,h2"); if(h&&h.textContent.trim())return h.textContent.trim();
+  /* (a) the document's own <title> always wins */
+  const dt=cleanDocTitle(doc.title); if(dt)return dt;
+  /* (b) Google Docs "Web Page" exports carry no <title>; the document title is a
+     title-styled paragraph in the body (<p class="title">), not a heading */
+  const tp=doc.querySelector("p.title, .title");
+  if(tp){ const t=cleanDocTitle(tp.textContent); if(t)return t; }
+  /* (c) last resort: first real heading, never a bare section label */
+  const hs=doc.querySelectorAll("h1,h2");
+  for(const h of hs){ const t=cleanDocTitle(h.textContent); if(t&&!SECTION_LABELS.test(t))return t; }
+  if(hs.length)return cleanDocTitle(hs[0].textContent);
   return "";
+}
+function htmlDocDate(rawHtml){
+  const doc=new DOMParser().parseFromString(String(rawHtml||""),"text/html");
+  const m=doc.querySelector('meta[name="sermon-date"]');
+  const v=m? (m.getAttribute("content")||"").trim() : "";
+  return /^\d{4}-\d{2}-\d{2}$/.test(v)? v : "";
 }
 function htmlText(h){ const d=document.createElement("div"); d.innerHTML=h||""; return d.textContent||""; }
 
@@ -348,11 +369,12 @@ function render(){
       .map(s=>{
         const meta=[s.scripture,s.series,s.date].filter(Boolean).join(" · ");
         const badge='<span class="badge saved">On device</span>';
-        return '<button class="row" data-id="'+esc(s.id)+'"><span class="row-main"><span class="row-title">'+esc(s.title)+'</span><span class="row-meta" style="display:block">'+esc(meta)+'</span></span>'+badge+"</button>";
+        return '<div class="row"><button class="row-open" data-id="'+esc(s.id)+'"><span class="row-main"><span class="row-title">'+esc(s.title)+'</span><span class="row-meta" style="display:block">'+esc(meta)+'</span></span>'+badge+'</button><button class="row-edit" data-edit="'+esc(s.id)+'">Edit</button></div>';
       }).join("");
     return '<div class="group-title">'+esc(k)+"</div>"+rows;
   }).join("");
-  els.list.querySelectorAll(".row").forEach(b=>b.addEventListener("click",()=>openSermon(b.dataset.id)));
+  els.list.querySelectorAll(".row-open").forEach(b=>b.addEventListener("click",()=>openSermon(b.dataset.id)));
+  els.list.querySelectorAll(".row-edit").forEach(b=>b.addEventListener("click",()=>showEditSermon(b.dataset.edit)));
 }
 
 /* ============ open a sermon: imported sermons only, stored on this device ============ */
@@ -430,7 +452,7 @@ function parseImport(raw){
 
 /* ============ modal + import ============ */
 function showModal(title,html){ $("modalBox").innerHTML="<h2>"+esc(title)+"</h2>"+html+'<div class="btnrow"><button class="btn" onclick="document.getElementById(\'modalWrap\').classList.remove(\'show\')">Close</button></div>'; $("modalWrap").classList.add("show"); }
-function showImport(){ let fileName="", pendingHtml="", pendingRawHtml="";
+function showImport(){ let fileName="", pendingHtml="", pendingRawHtml="", pendingDate="";
   $("modalBox").innerHTML=
   "<h2>Import a sermon</h2><p>Formatting is kept with a Google Docs file or a rich paste:</p>"+
   "<p><strong>Google Docs file:</strong> in the Doc, File &rarr; Download &rarr; Web Page (.html), then choose that file here.<br><strong>Copy &amp; paste:</strong> copy in the Doc, then tap the paste box and paste &mdash; bold, highlights, colors, underlines come with it.<br><strong>Markdown / text:</strong> a .md / .txt file or the text box still works as before.</p>"+
@@ -453,12 +475,13 @@ function showImport(){ let fileName="", pendingHtml="", pendingRawHtml="";
   $("impFile").addEventListener("change",async e=>{ const f=e.target.files[0]; if(!f)return; fileName=f.name;
     const txt=await f.text();
     if(/\.html?$/i.test(f.name)||f.type==="text/html"||/<html[\s>]/i.test(txt.slice(0,600))){ setHtml(txt,"file");
-      const t=htmlDocTitle(txt); if(t&&!$("impTitle").value.trim())$("impTitle").value=t; }
-    else { pendingHtml=""; pendingRawHtml=""; $("impText").value=txt; $("impRichNote").textContent=""; } });
+      const t=htmlDocTitle(txt); if(t&&!$("impTitle").value.trim())$("impTitle").value=t;
+      pendingDate=htmlDocDate(txt); }
+    else { pendingHtml=""; pendingRawHtml=""; pendingDate=""; $("impText").value=txt; $("impRichNote").textContent=""; } });
   $("impSave").addEventListener("click",async()=>{
     if(pendingHtml){
       const title=$("impTitle").value.trim()||htmlDocTitle(pendingRawHtml)||fileName.replace(/\.html?$/i,"")||"Imported sermon";
-      const item={id:"import-"+Date.now(),title:title,format:"html",html:pendingHtml,markdown:"",book:"",scripture:"",series:"",date:"",year:""};
+      const item={id:"import-"+Date.now(),title:title,format:"html",html:pendingHtml,markdown:"",book:"",scripture:"",series:"",date:pendingDate,year:pendingDate.slice(0,4)};
       IMPORTS.push(item); await DB.put("imports",item.id,item).catch(()=>{}); finishSave(); return; }
     const zoneText=$("impPaste").textContent||"";
     const raw=$("impText").value.trim()? $("impText").value : zoneText;
@@ -467,6 +490,27 @@ function showImport(){ let fileName="", pendingHtml="", pendingRawHtml="";
     const title=$("impTitle").value.trim()||p.title||fileName.replace(/\.(md|txt)$/i,"")||"Imported sermon";
     const item={id:"import-"+Date.now(),title:title,format:"markdown",markdown:p.body||raw.trim(),book:p.book||"",scripture:p.scripture||"",series:p.series||"",date:p.date||"",year:(p.date||"").slice(0,4)};
     IMPORTS.push(item); await DB.put("imports",item.id,item).catch(()=>{}); finishSave(); });
+}
+
+/* ============ edit an imported sermon: fix title / date without re-importing ============ */
+function showEditSermon(id){
+  const item=IMPORTS.find(i=>i.id===id); if(!item)return;
+  const attr=s=>esc(String(s||"")).replace(/"/g,"&quot;");
+  $("modalBox").innerHTML=
+  "<h2>Edit sermon</h2>"+
+  '<label for="editTitle">Title</label><input type="text" id="editTitle" value="'+attr(item.title)+'">'+
+  '<label for="editDate">Date</label><input type="date" id="editDate" value="'+attr(item.date)+'">'+
+  "<p>Leave the date empty to keep the sermon undated.</p>"+
+  '<div class="btnrow"><button class="btn primary" id="editSave">Save</button>'+
+  '<button class="btn" onclick="document.getElementById(\'modalWrap\').classList.remove(\'show\')">Cancel</button></div>';
+  $("modalWrap").classList.add("show");
+  $("editSave").addEventListener("click",async()=>{
+    const t=$("editTitle").value.trim(); if(t)item.title=t;
+    const d=$("editDate").value||"";
+    item.date=d; item.year=d.slice(0,4);
+    await DB.put("imports",item.id,item).catch(()=>{});
+    $("modalWrap").classList.remove("show"); populateFilters(); render();
+  });
 }
 
 /* In iOS standalone (home-screen) mode the Fullscreen API does not exist and
@@ -486,7 +530,7 @@ $("fontUp").addEventListener("click",()=>{settings.fontSize=Math.min(40,settings
 $("fontDown").addEventListener("click",()=>{settings.fontSize=Math.max(14,settings.fontSize-2);saveSettings();$("readerBody").style.fontSize=settings.fontSize+"px";progressRequest()});
 $("fsBtnLib").addEventListener("click",goFullscreen);
 $("updateCheck").addEventListener("click",()=>{ const u=new URL(location.href);
-  if(u.searchParams.get("v")!=="8"){ u.searchParams.set("v","8"); location.replace(u.toString()); }
+  if(u.searchParams.get("v")!=="9"){ u.searchParams.set("v","9"); location.replace(u.toString()); }
   else location.reload(); });
 $("fsBtnReader").addEventListener("click",goFullscreen);
 $("importBtn").addEventListener("click",showImport);
